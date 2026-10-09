@@ -1,0 +1,39 @@
+# Caddy sites for docker01. Values like {$PROXMOX_IP} come from ../.env.
+# After editing, reload without downtime:
+#   docker exec caddy caddy reload --config /etc/caddy/Caddyfile
+
+# ============================================================
+# EDGE sites: reach things outside your LAN (Tailscale/internet).
+# When you add a DMZ, these move to the DMZ VM's Caddy.
+# ============================================================
+
+# Jellyfin for the Apple TV: http://10.10.0.95:8096
+http://:8096 {
+	reverse_proxy {$JELLYFIN_TAILSCALE_IP}:8096
+}
+
+# Public domain (later): forward ports 80/443 to this VM, set JELLYFIN_DOMAIN
+# in .env, then remove the # signs below. Caddy gets the certificate itself.
+# {$JELLYFIN_DOMAIN} {
+# 	reverse_proxy {$JELLYFIN_TAILSCALE_IP}:8096
+# }
+
+# ============================================================
+# INTERNAL sites: LAN-only. These stay on docker01.
+# ============================================================
+
+# Uptime Kuma: http://10.10.0.95:3001
+http://:3001 {
+	reverse_proxy uptime-kuma:3001
+}
+
+# Proxmox UI: https://10.10.0.95:8006 (accept the certificate warning once;
+# Proxmox's login needs HTTPS)
+{$HOST_LAN_IP}:8006 {
+	tls internal
+	reverse_proxy https://{$PROXMOX_IP}:8006 {
+		transport http {
+			tls_insecure_skip_verify
+		}
+	}
+}

@@ -1,0 +1,29 @@
+# Semaphore UI: runs the homelab-ansible playbooks from a web page.
+# INTERNAL: stays on docker01. Web UI: http://10.10.0.95:3000 (through Caddy).
+services:
+  semaphore:
+    image: semaphoreui/semaphore:latest
+    container_name: semaphore
+    restart: unless-stopped
+    env_file: .env              # admin login + encryption key
+    environment:
+      SEMAPHORE_DB_DIALECT: sqlite
+      TZ: America/Chicago
+      ANSIBLE_HOST_KEY_CHECKING: "False"
+    volumes:
+      # Named volumes, because the container runs as a non-root user and
+      # plain folders would need their owner changed.
+      - semaphore_data:/var/lib/semaphore     # database (projects, keys, history)
+      - semaphore_config:/etc/semaphore
+      - semaphore_tmp:/tmp/semaphore
+    networks:
+      - proxy
+
+volumes:
+  semaphore_data:
+  semaphore_config:
+  semaphore_tmp:
+
+networks:
+  proxy:
+    external: true

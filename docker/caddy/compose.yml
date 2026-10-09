@@ -1,0 +1,25 @@
+# Caddy reverse proxy: the one front door for everything on docker01.
+# Sites are in conf/Caddyfile; IPs are in .env.
+services:
+  caddy:
+    image: caddy:2
+    container_name: caddy
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "80:80"         # for a public domain later (not forwarded yet)
+      - "443:443"
+      - "443:443/udp"
+      - "8096:8096"     # Jellyfin (LAN)
+      - "3001:3001"     # Uptime Kuma (LAN)
+      - "8006:8006"     # Proxmox UI (LAN)
+    volumes:
+      - ./conf:/etc/caddy     # Caddyfile
+      - ./data:/data          # certificates
+      - ./state:/config
+    networks:
+      - proxy
+
+networks:
+  proxy:
+    external: true            # create once: docker network create proxy

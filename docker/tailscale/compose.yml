@@ -1,0 +1,23 @@
+# Tailscale for docker01. Gives this VM a "tailscale0" interface so Caddy can
+# reach your brother's Jellyfin at its 100.x.y.z address.
+# EDGE: moves to the DMZ VM later, together with Caddy.
+services:
+  tailscale:
+    image: tailscale/tailscale:stable
+    container_name: tailscale
+    restart: unless-stopped
+    network_mode: host          # puts tailscale0 on the VM itself
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    env_file: .env              # TS_AUTHKEY (can be blank, see README)
+    environment:
+      TS_HOSTNAME: docker01
+      TS_STATE_DIR: /var/lib/tailscale
+      TS_USERSPACE: "false"     # kernel mode, needed for tailscale0
+      TS_AUTH_ONCE: "true"      # log in once, then reuse the saved login
+      TS_ACCEPT_DNS: "false"    # don't change the VM's DNS settings
+    volumes:
+      - ./state:/var/lib/tailscale

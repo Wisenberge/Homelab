@@ -1,0 +1,26 @@
+# Technitium DNS Server: ad blocking + local names (e.g. jellyfin.home.arpa).
+# INTERNAL: stays on docker01.
+# DNS itself (port 53) is published directly; Caddy can't proxy DNS.
+# Web console: http://10.10.0.95:5380 (through Caddy).
+services:
+  dns:
+    image: technitium/dns-server:latest
+    container_name: dns
+    hostname: dns
+    restart: unless-stopped
+    ports:
+      - "53:53/udp"
+      - "53:53/tcp"
+    env_file: .env              # DNS_SERVER_ADMIN_PASSWORD (first start only)
+    environment:
+      DNS_SERVER_DOMAIN: dns.home.arpa
+    volumes:
+      - ./config:/etc/dns       # all settings, zones and blocklists
+    sysctls:
+      - net.ipv4.ip_local_port_range=1024 65000
+    networks:
+      - proxy
+
+networks:
+  proxy:
+    external: true

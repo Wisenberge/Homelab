@@ -1,0 +1,15 @@
+# Uptime Kuma monitoring. INTERNAL: stays on docker01.
+# No ports: Caddy serves it at http://10.10.0.95:3001 over the proxy network.
+services:
+  uptime-kuma:
+    image: louislam/uptime-kuma:2
+    container_name: uptime-kuma
+    restart: unless-stopped
+    volumes:
+      - ./data:/app/data
+    networks:
+      - proxy
+
+networks:
+  proxy:
+    external: true
