@@ -1,0 +1,11 @@
+---
+galaxy_info:
+  role_name: reverse_proxy
+  author: homelab
+  description: Caddy reverse proxy with automatic HTTPS, running in Docker.
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+    - name: Ubuntu
+dependencies: []

@@ -1,0 +1,29 @@
+# Managed by Ansible (role: reverse_proxy). Local edits will be overwritten.
+services:
+  caddy:
+{% if reverse_proxy_needs_cloudflare | bool %}
+    build: .
+    image: homelab/caddy-cloudflare:local
+    env_file: .env
+{% else %}
+    image: {{ reverse_proxy_image }}
+{% endif %}
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - "{{ reverse_proxy_http_port }}:80"
+      - "{{ reverse_proxy_https_port }}:443"
+      - "{{ reverse_proxy_https_port }}:443/udp"
+{% for site in reverse_proxy_lan_sites %}
+      - "{{ site.port }}:{{ site.port }}"   # LAN only
+{% endfor %}
+    volumes:
+      - ./conf:/etc/caddy
+      - ./data:/data
+      - ./state:/config
+    networks:
+      - {{ reverse_proxy_network }}
+
+networks:
+  {{ reverse_proxy_network }}:
+    external: true

@@ -1,0 +1,18 @@
+# Managed by Ansible (role: uptime_kuma). Local edits will be overwritten.
+services:
+  uptime-kuma:
+    image: {{ uptime_kuma_image }}
+    container_name: uptime-kuma
+    restart: unless-stopped
+    volumes:
+      - ./data:/app/data
+{% if uptime_kuma_published_port | string | length > 0 %}
+    ports:
+      - "{{ uptime_kuma_published_port }}:3001"
+{% endif %}
+    networks:
+      - {{ uptime_kuma_network }}
+
+networks:
+  {{ uptime_kuma_network }}:
+    external: true

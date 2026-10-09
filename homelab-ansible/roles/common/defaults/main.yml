@@ -1,0 +1,21 @@
+---
+# Timezone, e.g. "America/New_York", "Europe/London", "Etc/UTC".
+common_timezone: Etc/UTC
+
+# Packages installed on every host.
+common_packages:
+  - ca-certificates
+  - curl
+  - git
+  - gnupg
+  - htop
+  - jq
+  - rsync
+  - unzip
+  - vim
+
+# Add your own packages here (handy as a Semaphore extra variable).
+common_extra_packages: []
+
+# Install security updates automatically every day.
+common_unattended_upgrades: true

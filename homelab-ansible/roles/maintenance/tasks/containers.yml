@@ -1,0 +1,44 @@
+---
+- name: Find the container stacks on this host
+  ansible.builtin.find:
+    paths: "{{ maintenance_compose_root }}"
+    patterns: ["compose.yml", "compose.yaml", "docker-compose.yml"]
+    recurse: true
+    depth: 2
+  register: maintenance_stacks
+
+- name: Pull newer images
+  ansible.builtin.command: docker compose pull --ignore-buildable
+  args:
+    chdir: "{{ item.path | dirname }}"
+  loop: "{{ maintenance_stacks.files }}"
+  loop_control:
+    label: "{{ item.path | dirname }}"
+  changed_when: false  # the "Recreate" step below reports what changed
+
+- name: Rebuild locally built images
+  ansible.builtin.command: docker compose build --pull
+  args:
+    chdir: "{{ item.path | dirname }}"
+  loop: "{{ maintenance_stacks.files }}"
+  loop_control:
+    label: "{{ item.path | dirname }}"
+  changed_when: false
+  when: maintenance_rebuild_local_images | bool
+
+- name: Recreate containers whose image changed
+  community.docker.docker_compose_v2:
+    project_src: "{{ item.path | dirname }}"
+    state: present
+    remove_orphans: true
+  loop: "{{ maintenance_stacks.files }}"
+  loop_control:
+    label: "{{ item.path | dirname }}"
+
+- name: Delete unused Docker images and build cache
+  community.docker.docker_prune:
+    images: true
+    images_filters:
+      dangling: false
+    builder_cache: true
+  when: maintenance_docker_prune | bool

@@ -1,0 +1,7 @@
+# Managed by Ansible (role: reverse_proxy).
+# Caddy with the Cloudflare DNS plugin, built the way the official image recommends.
+FROM {{ reverse_proxy_builder_image }} AS builder
+RUN xcaddy build --with github.com/caddy-dns/cloudflare
+
+FROM {{ reverse_proxy_image }}
+COPY --from=builder /usr/bin/caddy /usr/bin/caddy

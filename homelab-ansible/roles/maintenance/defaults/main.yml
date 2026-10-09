@@ -1,0 +1,22 @@
+---
+# --- OS packages ---
+maintenance_upgrade_packages: true
+# "safe" = never removes packages, "dist" = full upgrade (may add/remove packages).
+maintenance_upgrade_type: dist
+maintenance_autoremove: true
+
+# --- Containers ---
+# Pull newer images for every stack under this folder and recreate the
+# containers that changed. Only images with floating tags (like caddy:2) move.
+maintenance_update_containers: true
+maintenance_compose_root: "{{ homelab_base_dir | default('/opt/homelab') }}"
+# Also rebuild locally built images (e.g. Caddy with the Cloudflare plugin).
+maintenance_rebuild_local_images: false
+# Delete images no container uses anymore.
+maintenance_docker_prune: true
+
+# --- Reboot ---
+# Reboot only when the OS says it's needed (/var/run/reboot-required).
+# Set to false for the host that runs Semaphore itself, via host_vars.
+maintenance_reboot_if_required: true
+maintenance_reboot_timeout: 600

@@ -1,0 +1,11 @@
+---
+galaxy_info:
+  role_name: tailscale
+  author: homelab
+  description: Joins the host to Tailscale so Caddy can proxy to machines on the tailnet.
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+    - name: Ubuntu
+dependencies: []

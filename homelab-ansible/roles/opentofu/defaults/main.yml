@@ -1,0 +1,62 @@
+---
+# ---------------------------------------------------------------------------
+# What to do on this run
+#   none  - only install/update the container and config files
+#   plan  - show what OpenTofu would change (safe, the default)
+#   apply - create/change/delete VMs so Proxmox matches opentofu_vms
+# Removing a VM from opentofu_vms and running "apply" DELETES that VM.
+# ---------------------------------------------------------------------------
+opentofu_action: plan
+
+# --- Container ---
+opentofu_dir: "{{ homelab_base_dir | default('/opt/homelab') }}/opentofu"
+opentofu_version: "1.12"          # OpenTofu minor version to install
+opentofu_base_image: alpine:3
+opentofu_image_name: homelab/opentofu
+opentofu_rebuild_image: false     # true = rebuild to pick up new patch releases
+
+# --- Proxmox connection ---
+opentofu_proxmox_endpoint: https://192.168.1.10:8006/
+# API token in the form  user@realm!tokenname=uuid  (store as a Semaphore secret)
+opentofu_proxmox_api_token: ""
+opentofu_proxmox_insecure: true   # true if Proxmox uses its default self-signed cert
+opentofu_proxmox_node: pve        # node name as shown in the Proxmox UI
+
+# --- Storage and network ---
+# Storage that holds the downloaded cloud image. It needs the "Import" content
+# type enabled (Datacenter > Storage > local > Edit > Content).
+opentofu_image_datastore: local
+opentofu_vm_datastore: local-lvm  # where VM disks go
+opentofu_network_bridge: vmbr0
+opentofu_gateway: 192.168.1.1
+opentofu_dns_servers:
+  - 192.168.1.1
+
+# --- Cloud image every VM is built from ---
+# The file name must end in .qcow2 for Proxmox to import it.
+opentofu_cloud_image_url: https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img
+opentofu_cloud_image_file_name: noble-server-cloudimg-amd64.qcow2
+# Debian 13 alternative:
+#   url:  https://cloud.debian.org/images/cloud/trixie/latest/debian-13-genericcloud-amd64.qcow2
+#   name: debian-13-genericcloud-amd64.qcow2
+
+# --- Login for new VMs (set up by cloud-init) ---
+opentofu_vm_user: homelab
+opentofu_vm_ssh_public_keys: []   # e.g. ["ssh-ed25519 AAAA... you@laptop"]
+
+# Only set true if your image has qemu-guest-agent installed.
+# Stock Ubuntu/Debian cloud images don't, and OpenTofu would hang waiting for it.
+opentofu_vm_guest_agent: false
+
+# --- The VMs ---
+# Required: name. Everything else is optional and has the defaults shown.
+#   vm_id: null (Proxmox picks one)   cores: 2      memory_mb: 2048
+#   disk_gb: 20                       ip: "dhcp"    (or "192.168.1.21/24")
+#   vlan_id: null                     tags: []      started: true   on_boot: true
+opentofu_vms:
+  - name: docker02
+    cores: 2
+    memory_mb: 4096
+    disk_gb: 32
+    ip: 192.168.1.21/24
+    tags: [docker]

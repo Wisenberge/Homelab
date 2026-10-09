@@ -1,0 +1,11 @@
+---
+galaxy_info:
+  role_name: ddns
+  author: homelab
+  description: Keeps Cloudflare DNS records pointed at your home's public IP.
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+    - name: Ubuntu
+dependencies: []

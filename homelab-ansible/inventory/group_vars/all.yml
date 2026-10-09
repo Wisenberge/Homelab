@@ -1,0 +1,18 @@
+---
+# Settings shared by every host. Anything here can be overridden
+# per-run from Semaphore (Environment -> Extra variables, or a Survey).
+
+# SSH user Ansible connects as (must be able to sudo).
+ansible_user: homelab
+
+# Where every container stack lives: /opt/homelab/<app>/compose.yml
+homelab_base_dir: /opt/homelab
+
+# Shared Docker network. Caddy reaches apps by container name on this network.
+homelab_proxy_network: proxy
+
+common_timezone: America/Chicago
+
+# Users allowed to run docker without sudo.
+docker_users:
+  - homelab

@@ -1,0 +1,38 @@
+---
+# Private Git repo that receives the backups (SSH URL). Create it with at
+# least one commit (e.g. a README) before the first run.
+config_backup_repo_url: ""        # e.g. git@github.com:you/homelab-configs.git
+config_backup_branch: main
+
+# SSH private key with write access to the repo (a GitHub/Gitea "deploy key").
+# Store it as a Semaphore secret. Leave empty to use the host's own SSH key.
+config_backup_ssh_private_key: ""
+
+# Working copy of the backup repo on each host.
+config_backup_workdir: /var/lib/homelab-config-backup
+
+# What to back up. Each host gets its own folder in the repo:
+#   <hostname>/opt/homelab/caddy/compose.yml, <hostname>/etc/fstab, ...
+# Missing paths are skipped.
+config_backup_paths:
+  - "{{ homelab_base_dir | default('/opt/homelab') }}"
+  - /etc/fstab
+  - /etc/hosts
+  - /etc/netplan
+  - /etc/network/interfaces
+  - /etc/ssh/sshd_config
+  - /etc/docker/daemon.json
+
+# Never copied (rsync patterns). Keeps secrets and bulky app data out of Git.
+config_backup_exclude:
+  - .env
+  - "*.key"
+  - "*.pem"
+  - data/          # app databases and certificates
+  - state/
+  - .terraform/    # downloaded providers
+  - tfplan
+
+config_backup_git_user_name: Homelab Backup
+config_backup_git_user_email: homelab-backup@localhost
+config_backup_push: true

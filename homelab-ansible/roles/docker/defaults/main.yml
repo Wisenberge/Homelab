@@ -1,0 +1,18 @@
+---
+# Users added to the "docker" group so they can run docker without sudo.
+docker_users: []
+
+# Remove distro-packaged Docker (docker.io, podman-docker, ...) so it can't
+# conflict with the official Docker packages.
+docker_remove_conflicting_packages: true
+
+# Container log rotation so logs can't fill the disk.
+docker_log_max_size: 10m
+docker_log_max_file: 3
+
+# Anything else you want in /etc/docker/daemon.json.
+# Example: { "dns": ["192.168.1.1"] }
+docker_daemon_extra_options: {}
+
+# Shared network that Caddy and your apps join.
+docker_proxy_network: "{{ homelab_proxy_network | default('proxy') }}"

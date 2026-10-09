@@ -1,0 +1,35 @@
+---
+- name: Make sure this is a Debian or Ubuntu host
+  ansible.builtin.assert:
+    that: ansible_facts['os_family'] == "Debian"
+    fail_msg: "These roles support Debian and Ubuntu only (found {{ ansible_facts['distribution'] }})."
+    quiet: true
+
+- name: Install base packages
+  ansible.builtin.apt:
+    name: "{{ common_packages + common_extra_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Set the timezone
+  community.general.timezone:
+    name: "{{ common_timezone }}"
+
+- name: Install unattended-upgrades
+  ansible.builtin.apt:
+    name: unattended-upgrades
+    state: present
+  when: common_unattended_upgrades | bool
+
+- name: Turn on daily automatic security updates
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    content: |
+      // Managed by Ansible (role: common)
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Unattended-Upgrade "1";
+    owner: root
+    group: root
+    mode: "0644"
+  when: common_unattended_upgrades | bool

@@ -1,0 +1,9 @@
+---
+# Copies configuration files from each host into a Git repository and pushes it.
+# Runs one host at a time so pushes never collide.
+- name: Back up configuration files to Git
+  hosts: "{{ target_hosts | default('docker_hosts') }}"
+  become: true
+  serial: 1
+  roles:
+    - config_backup

@@ -1,0 +1,54 @@
+---
+- name: Skip DDNS when no domains are set
+  when: ddns_domains | length == 0
+  block:
+    - name: Explain why DDNS is skipped
+      ansible.builtin.debug:
+        msg: "ddns_domains is empty, so DDNS is skipped on {{ inventory_hostname }}."
+
+    - name: Stop here for this host
+      ansible.builtin.meta: end_host
+
+- name: Check the DDNS settings
+  ansible.builtin.assert:
+    that: ddns_cloudflare_api_token | length > 0
+    fail_msg: "Set ddns_cloudflare_api_token (as a Semaphore secret)."
+    quiet: true
+
+- name: Check that Docker Compose is installed
+  ansible.builtin.command: docker compose version
+  register: ddns_compose_check
+  changed_when: false
+  failed_when: ddns_compose_check.rc != 0
+
+- name: Create the DDNS folder
+  ansible.builtin.file:
+    path: "{{ ddns_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Store the Cloudflare token in a private .env file
+  ansible.builtin.copy:
+    dest: "{{ ddns_dir }}/.env"
+    content: |
+      CLOUDFLARE_API_TOKEN={{ ddns_cloudflare_api_token }}
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+
+- name: Write the DDNS compose file
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ ddns_dir }}/compose.yml"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Start the DDNS updater
+  community.docker.docker_compose_v2:
+    project_src: "{{ ddns_dir }}"
+    state: present
+    remove_orphans: true

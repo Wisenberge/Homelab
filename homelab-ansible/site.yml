@@ -1,0 +1,20 @@
+---
+# Full rebuild: runs everything needed to bring the homelab back from scratch.
+# Maintenance and config backup are separate, scheduled templates in Semaphore.
+- name: Base setup and Docker
+  ansible.builtin.import_playbook: docker_host.yml
+
+- name: Tailscale
+  ansible.builtin.import_playbook: tailscale.yml
+
+- name: Dynamic DNS
+  ansible.builtin.import_playbook: ddns.yml
+
+- name: Reverse proxy
+  ansible.builtin.import_playbook: reverse_proxy.yml
+
+- name: Monitoring
+  ansible.builtin.import_playbook: uptime_kuma.yml
+
+- name: OpenTofu for Proxmox VMs
+  ansible.builtin.import_playbook: opentofu.yml

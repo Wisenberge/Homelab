@@ -1,0 +1,20 @@
+---
+# Keeps Cloudflare DNS records pointed at your home's public IP, even when your
+# ISP changes it. Skip this role if you have a static IP.
+ddns_dir: "{{ homelab_base_dir | default('/opt/homelab') }}/ddns"
+ddns_image: favonia/cloudflare-ddns:1
+
+# Cloudflare API token with Zone > DNS > Edit for the domain(s) below.
+# Defaults to the reverse proxy's token, so one token can do both jobs.
+ddns_cloudflare_api_token: "{{ reverse_proxy_cloudflare_api_token | default('') }}"
+
+# The hostnames to keep updated. The domains must already be on Cloudflare.
+ddns_domains: []            # e.g. ["jellyfin.example.com"]
+
+# Keep this false for Jellyfin. Cloudflare's proxy ("orange cloud") can't be
+# used to stream video on non-Enterprise plans, so records stay "DNS only".
+ddns_proxied: false
+
+# Also publish your IPv6 address (AAAA record). Only turn this on if your
+# router allows inbound IPv6 on ports 80/443 to this host.
+ddns_ipv6: false

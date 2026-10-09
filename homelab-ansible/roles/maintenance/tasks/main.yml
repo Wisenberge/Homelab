@@ -1,0 +1,11 @@
+---
+- name: Update OS packages
+  ansible.builtin.include_tasks: packages.yml
+  when: maintenance_upgrade_packages | bool
+
+- name: Update containers
+  ansible.builtin.include_tasks: containers.yml
+  when: maintenance_update_containers | bool
+
+- name: Reboot if needed
+  ansible.builtin.include_tasks: reboot.yml

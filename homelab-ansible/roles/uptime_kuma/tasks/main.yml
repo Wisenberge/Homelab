@@ -1,0 +1,31 @@
+---
+- name: Check that Docker Compose is installed
+  ansible.builtin.command: docker compose version
+  register: uptime_kuma_compose_check
+  changed_when: false
+  failed_when: uptime_kuma_compose_check.rc != 0
+
+- name: Create the Uptime Kuma folders
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop:
+    - "{{ uptime_kuma_dir }}"
+    - "{{ uptime_kuma_dir }}/data"
+
+- name: Write the Uptime Kuma compose file
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ uptime_kuma_dir }}/compose.yml"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Start Uptime Kuma
+  community.docker.docker_compose_v2:
+    project_src: "{{ uptime_kuma_dir }}"
+    state: present
+    remove_orphans: true

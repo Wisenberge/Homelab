@@ -1,0 +1,10 @@
+---
+# Internal values; you shouldn't need to change these.
+config_backup_repo_dir: "{{ config_backup_workdir }}/repo"
+config_backup_host_dir: "{{ config_backup_repo_dir }}/{{ inventory_hostname }}"
+config_backup_key_file: "{{ config_backup_workdir }}/deploy_key"
+
+config_backup_git_ssh_command: >-
+  {{ 'ssh -i ' ~ config_backup_key_file ~ ' -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new'
+     if config_backup_ssh_private_key | length > 0
+     else 'ssh -o StrictHostKeyChecking=accept-new' }}

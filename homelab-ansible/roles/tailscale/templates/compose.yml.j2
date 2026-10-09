@@ -1,0 +1,26 @@
+# Managed by Ansible (role: tailscale). Local edits will be overwritten.
+services:
+  tailscale:
+    image: {{ tailscale_image }}
+    container_name: tailscale
+    restart: unless-stopped
+    # Host networking + kernel mode puts a real "tailscale0" interface on this
+    # host, so Caddy and everything else here can reach 100.x.y.z addresses.
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    env_file: .env
+    environment:
+      TS_HOSTNAME: "{{ tailscale_hostname }}"
+      TS_STATE_DIR: /var/lib/tailscale
+      TS_USERSPACE: "false"     # kernel mode (needed for the tailscale0 interface)
+      TS_AUTH_ONCE: "true"      # reuse the saved login instead of the auth key
+      TS_ACCEPT_DNS: "false"    # don't change this host's DNS settings
+{% if tailscale_extra_args | length > 0 %}
+      TS_EXTRA_ARGS: "{{ tailscale_extra_args }}"
+{% endif %}
+    volumes:
+      - ./state:/var/lib/tailscale

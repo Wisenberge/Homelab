@@ -1,0 +1,9 @@
+---
+# Prepares a fresh Debian/Ubuntu machine: base packages, timezone,
+# automatic security updates, Docker Engine and the Compose plugin.
+- name: Prepare Docker hosts
+  hosts: "{{ target_hosts | default('docker_hosts') }}"
+  become: true
+  roles:
+    - common
+    - docker

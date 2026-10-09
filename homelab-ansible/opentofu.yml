@@ -1,0 +1,8 @@
+---
+# Builds the OpenTofu container and uses it to create Proxmox VMs.
+# opentofu_action: "plan" (default, just shows changes) or "apply" (makes them).
+- name: OpenTofu for Proxmox VMs
+  hosts: "{{ target_hosts | default('tofu_hosts') }}"
+  become: true
+  roles:
+    - opentofu

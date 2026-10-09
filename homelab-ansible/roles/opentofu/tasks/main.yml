@@ -1,0 +1,137 @@
+---
+- name: Check the OpenTofu settings
+  ansible.builtin.assert:
+    that:
+      - opentofu_action in ['none', 'plan', 'apply']
+      - opentofu_proxmox_endpoint | length > 0
+      - opentofu_proxmox_api_token | length > 0
+      - opentofu_vms | map(attribute='name') | list | unique | length == opentofu_vms | length
+    fail_msg: >-
+      opentofu_action must be none, plan or apply. opentofu_proxmox_endpoint and
+      opentofu_proxmox_api_token are required. Every VM needs a unique name.
+    quiet: true
+
+- name: Check that Docker is installed
+  ansible.builtin.command: docker version
+  register: opentofu_docker_check
+  changed_when: false
+  failed_when: opentofu_docker_check.rc != 0
+
+- name: Create the OpenTofu folders
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+  loop:
+    - "{{ opentofu_dir }}"
+    - "{{ opentofu_dir }}/workspace"
+
+# ---------- The container ----------
+
+- name: Write the OpenTofu Dockerfile
+  ansible.builtin.template:
+    src: Dockerfile.j2
+    dest: "{{ opentofu_dir }}/Dockerfile"
+    owner: root
+    group: root
+    mode: "0644"
+  register: opentofu_dockerfile
+
+- name: Build the OpenTofu container image
+  community.docker.docker_image_build:
+    name: "{{ opentofu_image_name }}"
+    tag: "{{ opentofu_version }}"
+    path: "{{ opentofu_dir }}"
+    pull: true
+    rebuild: "{{ 'always' if (opentofu_rebuild_image | bool) or opentofu_dockerfile is changed else 'never' }}"
+
+- name: Write the tofu.sh helper
+  ansible.builtin.template:
+    src: tofu.sh.j2
+    dest: "{{ opentofu_dir }}/tofu.sh"
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Store the Proxmox API token in a private .env file
+  ansible.builtin.copy:
+    dest: "{{ opentofu_dir }}/.env"
+    content: |
+      TF_VAR_proxmox_api_token={{ opentofu_proxmox_api_token }}
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+
+# ---------- The OpenTofu project ----------
+
+- name: Copy the OpenTofu configuration
+  ansible.builtin.copy:
+    src: tofu/
+    dest: "{{ opentofu_dir }}/workspace/"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Write the VM settings (homelab.auto.tfvars.json)
+  ansible.builtin.template:
+    src: homelab.auto.tfvars.json.j2
+    dest: "{{ opentofu_dir }}/workspace/homelab.auto.tfvars.json"
+    owner: root
+    group: root
+    mode: "0644"
+
+# ---------- Run it ----------
+
+- name: Run tofu init, plan and apply
+  when: opentofu_action != 'none'
+  block:
+    - name: Run tofu init
+      ansible.builtin.command: ./tofu.sh init -input=false -no-color
+      args:
+        chdir: "{{ opentofu_dir }}"
+      register: opentofu_init
+      changed_when: "'Installing' in opentofu_init.stdout"
+
+    # Exit code 0 = no changes, 2 = changes to make, anything else = error.
+    - name: Run tofu plan
+      ansible.builtin.command: ./tofu.sh plan -input=false -no-color -detailed-exitcode -out=tfplan
+      args:
+        chdir: "{{ opentofu_dir }}"
+      register: opentofu_plan
+      changed_when: false
+      failed_when: opentofu_plan.rc not in [0, 2]
+
+    - name: Show the plan
+      ansible.builtin.debug:
+        msg: "{{ opentofu_plan.stdout_lines }}"
+
+    - name: Run tofu apply
+      ansible.builtin.command: ./tofu.sh apply -input=false -no-color tfplan
+      args:
+        chdir: "{{ opentofu_dir }}"
+      register: opentofu_apply
+      changed_when: true
+      when:
+        - opentofu_action == 'apply'
+        - opentofu_plan.rc == 2
+
+    - name: Show the apply result
+      ansible.builtin.debug:
+        msg: "{{ opentofu_apply.stdout_lines }}"
+      when: opentofu_apply is changed
+
+    - name: Read the VM list
+      ansible.builtin.command: ./tofu.sh output -json vms
+      args:
+        chdir: "{{ opentofu_dir }}"
+      register: opentofu_output
+      changed_when: false
+      failed_when: false
+
+    - name: Show the VMs OpenTofu manages
+      ansible.builtin.debug:
+        msg: "{{ opentofu_output.stdout | from_json }}"
+      when: opentofu_output.rc == 0

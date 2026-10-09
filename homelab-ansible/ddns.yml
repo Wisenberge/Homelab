@@ -1,0 +1,7 @@
+---
+# Keeps your public DNS records pointed at your home IP (Cloudflare).
+- name: Dynamic DNS
+  hosts: "{{ target_hosts | default('ddns_hosts') }}"
+  become: true
+  roles:
+    - ddns

@@ -1,0 +1,51 @@
+---
+# Where the Caddy stack lives on the host.
+reverse_proxy_dir: "{{ homelab_base_dir | default('/opt/homelab') }}/caddy"
+
+# Docker network shared with the apps Caddy proxies to.
+reverse_proxy_network: "{{ homelab_proxy_network | default('proxy') }}"
+
+# How Caddy gets HTTPS certificates (the default for every site; a site can
+# override it with its own tls_mode):
+#   internal   - Caddy's own local CA. Works fully offline; install the root cert
+#                (data/caddy/pki/authorities/local/root.crt) on your devices.
+#   acme       - Let's Encrypt via HTTP challenge. Ports 80/443 must be reachable
+#                from the internet. Use this for public sites.
+#   cloudflare - Let's Encrypt via Cloudflare DNS challenge. Real certs for
+#                internal-only services, no open ports. Needs an API token.
+reverse_proxy_tls_mode: internal
+
+# Email for Let's Encrypt expiry notices (required for acme and cloudflare).
+reverse_proxy_acme_email: ""
+
+# Cloudflare API token with Zone:DNS:Edit permission. Store it as a Semaphore secret.
+reverse_proxy_cloudflare_api_token: ""
+
+# Images. The builder image is only used in cloudflare mode.
+reverse_proxy_image: caddy:2
+reverse_proxy_builder_image: caddy:2-builder
+
+reverse_proxy_http_port: 80
+reverse_proxy_https_port: 443
+
+# One entry per website. Keys:
+#   domain          - hostname to serve (required)
+#   upstream        - where to send traffic: "container:port" on the proxy
+#                     network, "ip:port" / "https://ip:port" on your LAN, or a
+#                     Tailscale IP like "100.101.102.103:8096" (required)
+#   skip_tls_verify - true for upstreams with self-signed certs, like Proxmox (optional)
+#   tls_mode        - internal, acme or cloudflare for just this site (optional)
+reverse_proxy_sites:
+  - domain: kuma.home.example.com
+    upstream: uptime-kuma:3001
+  - domain: pve.home.example.com
+    upstream: https://192.168.1.10:8006
+    skip_tls_verify: true
+
+# Plain-HTTP sites for your home network only, opened by IP and port, e.g.
+# http://192.168.1.20:8096 on an Apple TV. No domain, certificates or port
+# forwarding needed. Don't forward these ports on your router. Keys:
+#   port     - port on this host to listen on (required; not 80 or 443)
+#   upstream - where to send traffic, same formats as above (required)
+# Example: { port: 8096, upstream: "100.101.102.103:8096" }
+reverse_proxy_lan_sites: []

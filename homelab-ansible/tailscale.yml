@@ -1,0 +1,8 @@
+---
+# Joins the proxy host to Tailscale so Caddy can reach machines on your
+# tailnet, like a server someone shared with you.
+- name: Connect to Tailscale
+  hosts: "{{ target_hosts | default('tailscale_hosts') }}"
+  become: true
+  roles:
+    - tailscale

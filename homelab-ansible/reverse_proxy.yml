@@ -1,0 +1,8 @@
+---
+# Deploys Caddy as the HTTPS reverse proxy in front of your services.
+# Add or change sites with the reverse_proxy_sites variable.
+- name: Deploy Caddy reverse proxy
+  hosts: "{{ target_hosts | default('proxy_hosts') }}"
+  become: true
+  roles:
+    - reverse_proxy

@@ -1,0 +1,8 @@
+---
+# Semaphore installs these automatically before each run.
+# Locally: ansible-galaxy collection install -r collections/requirements.yml
+collections:
+  - name: community.docker
+    version: ">=4.0.0"
+  - name: community.general
+    version: ">=9.0.0"

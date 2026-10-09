@@ -1,0 +1,11 @@
+---
+- name: Upgrade all apt packages
+  ansible.builtin.apt:
+    update_cache: true
+    upgrade: "{{ maintenance_upgrade_type }}"
+
+- name: Remove packages that are no longer needed
+  ansible.builtin.apt:
+    autoremove: true
+    autoclean: true
+  when: maintenance_autoremove | bool

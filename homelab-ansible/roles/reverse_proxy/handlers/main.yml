@@ -1,0 +1,6 @@
+---
+# Reloading is zero-downtime. If the new Caddyfile is invalid, Caddy keeps
+# running the old config and this task fails with the error.
+- name: Reload Caddy
+  ansible.builtin.command: docker exec caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
+  changed_when: true

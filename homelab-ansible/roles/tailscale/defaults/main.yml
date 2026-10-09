@@ -1,0 +1,21 @@
+---
+tailscale_dir: "{{ homelab_base_dir | default('/opt/homelab') }}/tailscale"
+tailscale_image: tailscale/tailscale:stable
+
+# Auth key from the Tailscale admin console (Settings > Keys). Store it as a
+# Semaphore secret. It's only used for the first login; after that the saved
+# login in state/ is reused.
+# Don't add tags to the key if you want to reach a machine someone shared with
+# you: shared machines are only visible to devices owned by that person.
+tailscale_auth_key: ""
+
+# Name this host shows up as in Tailscale.
+tailscale_hostname: "{{ inventory_hostname }}"
+
+# Extra flags for "tailscale up", e.g. "--accept-routes".
+tailscale_extra_args: ""
+
+# URLs that must answer over Tailscale once it's connected. The run fails if
+# one doesn't, which catches sharing/firewall problems early.
+# Jellyfin example: http://100.101.102.103:8096/health
+tailscale_check_urls: []

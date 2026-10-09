@@ -1,0 +1,8 @@
+---
+uptime_kuma_dir: "{{ homelab_base_dir | default('/opt/homelab') }}/uptime-kuma"
+uptime_kuma_image: louislam/uptime-kuma:2
+uptime_kuma_network: "{{ homelab_proxy_network | default('proxy') }}"
+
+# Leave empty to reach Kuma only through Caddy (recommended).
+# Set to a port like 3001 to also expose it directly on the host.
+uptime_kuma_published_port: ""

@@ -1,0 +1,29 @@
+---
+# Internal values; you shouldn't need to change these.
+docker_distro: "{{ ansible_facts['distribution'] | lower }}"
+
+docker_arch_map:
+  x86_64: amd64
+  aarch64: arm64
+  armv7l: armhf
+
+docker_apt_arch: "{{ docker_arch_map[ansible_facts['architecture']] | default(ansible_facts['architecture']) }}"
+
+docker_conflicting_packages:
+  - docker.io
+  - docker-doc
+  - docker-compose
+  - docker-compose-v2
+  - podman-docker
+  - containerd
+  - runc
+
+docker_packages:
+  - docker-ce
+  - docker-ce-cli
+  - containerd.io
+  - docker-buildx-plugin
+  - docker-compose-plugin
+  # Python libraries the community.docker Ansible modules need on the host.
+  - python3-docker
+  - python3-requests

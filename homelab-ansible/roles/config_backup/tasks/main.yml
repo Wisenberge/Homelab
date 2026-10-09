@@ -1,0 +1,104 @@
+---
+- name: Check the backup settings
+  ansible.builtin.assert:
+    that: config_backup_repo_url | length > 0
+    fail_msg: "Set config_backup_repo_url to the SSH URL of your backup repo."
+    quiet: true
+
+- name: Install git and rsync
+  ansible.builtin.apt:
+    name: [git, rsync]
+    state: present
+
+- name: Create the backup working folder
+  ansible.builtin.file:
+    path: "{{ config_backup_workdir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Save the deploy key
+  ansible.builtin.copy:
+    dest: "{{ config_backup_key_file }}"
+    content: "{{ config_backup_ssh_private_key | trim }}\n"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  when: config_backup_ssh_private_key | length > 0
+
+- name: Get the latest copy of the backup repo
+  ansible.builtin.git:
+    repo: "{{ config_backup_repo_url }}"
+    dest: "{{ config_backup_repo_dir }}"
+    version: "{{ config_backup_branch }}"
+    key_file: "{{ config_backup_key_file if config_backup_ssh_private_key | length > 0 else omit }}"
+    accept_newhostkey: true
+    force: true
+
+# Start from an empty folder so files deleted on the host also disappear from Git.
+- name: Clear this host's folder in the repo
+  ansible.builtin.file:
+    path: "{{ config_backup_host_dir }}"
+    state: absent
+
+- name: Recreate this host's folder in the repo
+  ansible.builtin.file:
+    path: "{{ config_backup_host_dir }}"
+    state: directory
+    mode: "0700"
+
+- name: Copy configuration files into the repo
+  ansible.builtin.command:
+    argv: "{{ ['rsync', '-a', '--relative', '--ignore-missing-args']
+              + (config_backup_exclude | map('regex_replace', '^', '--exclude=') | list)
+              + [item, config_backup_host_dir + '/'] }}"
+  loop: "{{ config_backup_paths }}"
+  changed_when: false  # the commit step below reports real changes
+
+- name: Stage all changes
+  ansible.builtin.command: git add --all
+  args:
+    chdir: "{{ config_backup_repo_dir }}"
+  changed_when: false
+
+- name: Check for changes
+  ansible.builtin.command: git status --porcelain
+  args:
+    chdir: "{{ config_backup_repo_dir }}"
+  register: config_backup_status
+  changed_when: false
+
+- name: Commit and push the changes
+  when: config_backup_status.stdout | length > 0
+  block:
+    - name: Commit the changes
+      ansible.builtin.command:
+        argv:
+          - git
+          - -c
+          - "user.name={{ config_backup_git_user_name }}"
+          - -c
+          - "user.email={{ config_backup_git_user_email }}"
+          - commit
+          - -m
+          - "Config backup: {{ inventory_hostname }} {{ ansible_facts['date_time']['iso8601'] }}"
+      args:
+        chdir: "{{ config_backup_repo_dir }}"
+      changed_when: true
+
+    - name: Push to the remote repo
+      ansible.builtin.command: "git push origin HEAD:{{ config_backup_branch }}"
+      args:
+        chdir: "{{ config_backup_repo_dir }}"
+      environment:
+        GIT_SSH_COMMAND: "{{ config_backup_git_ssh_command }}"
+      changed_when: true
+      when: config_backup_push | bool
+
+- name: Report the result
+  ansible.builtin.debug:
+    msg: >-
+      {{ 'Backed up changes:' if config_backup_status.stdout | length > 0 else 'No config changes since the last backup.' }}
+      {{ config_backup_status.stdout_lines | default([]) | join(', ') }}

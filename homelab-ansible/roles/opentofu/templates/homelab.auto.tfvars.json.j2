@@ -1,0 +1,16 @@
+{{ {
+  "proxmox_endpoint": opentofu_proxmox_endpoint,
+  "proxmox_insecure": opentofu_proxmox_insecure | bool,
+  "proxmox_node": opentofu_proxmox_node,
+  "image_datastore": opentofu_image_datastore,
+  "vm_datastore": opentofu_vm_datastore,
+  "network_bridge": opentofu_network_bridge,
+  "gateway": opentofu_gateway,
+  "dns_servers": opentofu_dns_servers,
+  "cloud_image_url": opentofu_cloud_image_url,
+  "cloud_image_file_name": opentofu_cloud_image_file_name,
+  "vm_user": opentofu_vm_user,
+  "ssh_public_keys": opentofu_vm_ssh_public_keys,
+  "guest_agent": opentofu_vm_guest_agent | bool,
+  "vms": opentofu_vms
+} | to_nice_json(indent=2) }}

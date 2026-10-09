@@ -1,0 +1,20 @@
+---
+- name: Check whether a reboot is required
+  ansible.builtin.stat:
+    path: /var/run/reboot-required
+  register: maintenance_reboot_flag
+
+- name: Reboot the host
+  ansible.builtin.reboot:
+    msg: "Rebooting for updates (Ansible maintenance)"
+    reboot_timeout: "{{ maintenance_reboot_timeout | int }}"
+  when:
+    - maintenance_reboot_flag.stat.exists
+    - maintenance_reboot_if_required | bool
+
+- name: Warn that a reboot is pending
+  ansible.builtin.debug:
+    msg: "{{ inventory_hostname }} needs a reboot, but maintenance_reboot_if_required is false."
+  when:
+    - maintenance_reboot_flag.stat.exists
+    - not (maintenance_reboot_if_required | bool)

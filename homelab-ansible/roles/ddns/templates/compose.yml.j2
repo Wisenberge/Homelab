@@ -1,0 +1,20 @@
+# Managed by Ansible (role: ddns). Local edits will be overwritten.
+# Checks your public IP every few minutes and updates Cloudflare when it changes.
+# See what it's doing with: docker logs cloudflare-ddns
+services:
+  cloudflare-ddns:
+    image: {{ ddns_image }}
+    container_name: cloudflare-ddns
+    restart: unless-stopped
+    network_mode: host     # needed to detect IPv6 addresses
+    user: "1000:1000"
+    read_only: true
+    cap_drop: [all]
+    security_opt: [no-new-privileges:true]
+    env_file: .env
+    environment:
+      DOMAINS: "{{ ddns_domains | join(',') }}"
+      PROXIED: "{{ ddns_proxied | bool | lower }}"
+{% if not (ddns_ipv6 | bool) %}
+      IP6_PROVIDER: none
+{% endif %}

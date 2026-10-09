@@ -1,0 +1,38 @@
+# Managed by Ansible (role: reverse_proxy).
+# Don't edit this file. Change the reverse_proxy_sites variable instead.
+
+{% if reverse_proxy_acme_email | length > 0 %}
+{
+	email {{ reverse_proxy_acme_email }}
+}
+
+{% endif %}
+{% for site in reverse_proxy_sites %}
+{% set tls_mode = site.tls_mode | default(reverse_proxy_tls_mode) %}
+{{ site.domain }} {
+{% if tls_mode == 'internal' %}
+	tls internal
+{% elif tls_mode == 'cloudflare' %}
+	tls {
+		dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+	}
+{% endif %}
+{% if site.skip_tls_verify | default(false) | bool %}
+	reverse_proxy {{ site.upstream }} {
+		transport http {
+			tls_insecure_skip_verify
+		}
+	}
+{% else %}
+	reverse_proxy {{ site.upstream }}
+{% endif %}
+}
+
+{% endfor %}
+{% for site in reverse_proxy_lan_sites %}
+# LAN only: open http://<this host's IP>:{{ site.port }}
+http://:{{ site.port }} {
+	reverse_proxy {{ site.upstream }}
+}
+
+{% endfor %}

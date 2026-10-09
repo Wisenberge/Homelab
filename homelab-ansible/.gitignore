@@ -1,0 +1,4 @@
+*.retry
+.vault_pass*
+.ansible/
+collections/ansible_collections/

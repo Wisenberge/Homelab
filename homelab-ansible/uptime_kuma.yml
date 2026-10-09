@@ -1,0 +1,7 @@
+---
+# Deploys Uptime Kuma for monitoring your services.
+- name: Deploy Uptime Kuma
+  hosts: "{{ target_hosts | default('monitoring_hosts') }}"
+  become: true
+  roles:
+    - uptime_kuma

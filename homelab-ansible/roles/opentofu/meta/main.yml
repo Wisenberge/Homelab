@@ -1,0 +1,11 @@
+---
+galaxy_info:
+  role_name: opentofu
+  author: homelab
+  description: Builds an OpenTofu container and uses it to manage Proxmox VMs.
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+    - name: Ubuntu
+dependencies: []

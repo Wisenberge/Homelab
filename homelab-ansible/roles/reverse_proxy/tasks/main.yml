@@ -1,0 +1,79 @@
+---
+- name: Check the reverse proxy settings
+  ansible.builtin.assert:
+    that:
+      - (reverse_proxy_sites + reverse_proxy_lan_sites) | length > 0
+      - reverse_proxy_tls_modes_used | difference(['internal', 'acme', 'cloudflare']) | length == 0
+      - reverse_proxy_acme_email | length > 0 or reverse_proxy_tls_modes_used | difference(['internal']) | length == 0
+      - not (reverse_proxy_needs_cloudflare | bool) or reverse_proxy_cloudflare_api_token | length > 0
+      - reverse_proxy_lan_ports | unique | length == reverse_proxy_lan_ports | length
+      - reverse_proxy_lan_ports | intersect([reverse_proxy_http_port | int, reverse_proxy_https_port | int]) | length == 0
+    fail_msg: >-
+      Set reverse_proxy_sites or reverse_proxy_lan_sites. tls_mode must be internal,
+      acme or cloudflare. acme/cloudflare need reverse_proxy_acme_email; cloudflare
+      also needs reverse_proxy_cloudflare_api_token. Each LAN site needs its own
+      port, and it can't be the HTTP/HTTPS port.
+    quiet: true
+
+- name: Check that Docker Compose is installed
+  ansible.builtin.command: docker compose version
+  register: reverse_proxy_compose_check
+  changed_when: false
+  failed_when: reverse_proxy_compose_check.rc != 0
+
+- name: Create the Caddy folders
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop:
+    - "{{ reverse_proxy_dir }}"
+    - "{{ reverse_proxy_dir }}/conf"   # Caddyfile
+    - "{{ reverse_proxy_dir }}/data"   # certificates (not backed up to Git)
+    - "{{ reverse_proxy_dir }}/state"  # Caddy's autosaved config
+
+- name: Write the Caddyfile
+  ansible.builtin.template:
+    src: Caddyfile.j2
+    dest: "{{ reverse_proxy_dir }}/conf/Caddyfile"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload Caddy
+
+- name: Write the Dockerfile for Caddy with the Cloudflare DNS plugin
+  ansible.builtin.template:
+    src: Dockerfile.j2
+    dest: "{{ reverse_proxy_dir }}/Dockerfile"
+    owner: root
+    group: root
+    mode: "0644"
+  when: reverse_proxy_needs_cloudflare | bool
+
+- name: Store the Cloudflare token in a private .env file
+  ansible.builtin.copy:
+    dest: "{{ reverse_proxy_dir }}/.env"
+    content: |
+      CLOUDFLARE_API_TOKEN={{ reverse_proxy_cloudflare_api_token }}
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  when: reverse_proxy_needs_cloudflare | bool
+
+- name: Write the Caddy compose file
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ reverse_proxy_dir }}/compose.yml"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Start Caddy
+  community.docker.docker_compose_v2:
+    project_src: "{{ reverse_proxy_dir }}"
+    state: present
+    build: policy
+    remove_orphans: true

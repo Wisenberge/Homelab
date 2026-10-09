@@ -1,0 +1,11 @@
+---
+galaxy_info:
+  role_name: docker
+  author: homelab
+  description: Installs Docker Engine and the Compose plugin from Docker's official repository.
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+    - name: Ubuntu
+dependencies: []

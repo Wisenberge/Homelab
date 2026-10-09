@@ -1,0 +1,10 @@
+---
+# Server maintenance: OS updates, container image updates, cleanup,
+# and a reboot when the OS asks for one.
+# Runs one host at a time so a reboot never takes down everything at once.
+- name: Server maintenance
+  hosts: "{{ target_hosts | default('docker_hosts') }}"
+  become: true
+  serial: "{{ maintenance_serial | default(1) }}"
+  roles:
+    - maintenance

@@ -1,0 +1,10 @@
+# Managed by Ansible (role: opentofu).
+# The official "minimal" image only contains the tofu binary; OpenTofu's docs
+# recommend copying it into your own image like this.
+FROM ghcr.io/opentofu/opentofu:{{ opentofu_version }}-minimal AS tofu
+
+FROM {{ opentofu_base_image }}
+RUN apk add --no-cache bash ca-certificates git openssh-client
+COPY --from=tofu /usr/local/bin/tofu /usr/local/bin/tofu
+WORKDIR /workspace
+ENTRYPOINT ["tofu"]

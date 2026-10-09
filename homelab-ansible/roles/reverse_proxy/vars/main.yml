@@ -1,0 +1,11 @@
+---
+# Internal values; you shouldn't need to change these.
+
+# Every certificate mode in use: the default plus any per-site tls_mode.
+reverse_proxy_tls_modes_used: "{{ reverse_proxy_sites | map(attribute='tls_mode', default=reverse_proxy_tls_mode) | unique | list }}"
+
+# The Cloudflare DNS plugin (custom Caddy image) is only built when a site needs it.
+reverse_proxy_needs_cloudflare: "{{ 'cloudflare' in reverse_proxy_tls_modes_used }}"
+
+# Ports used by reverse_proxy_lan_sites.
+reverse_proxy_lan_ports: "{{ reverse_proxy_lan_sites | map(attribute='port') | map('int') | list }}"

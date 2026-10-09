@@ -1,0 +1,11 @@
+---
+galaxy_info:
+  role_name: maintenance
+  author: homelab
+  description: OS updates, container image updates, Docker cleanup and reboots when needed.
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+    - name: Ubuntu
+dependencies: []

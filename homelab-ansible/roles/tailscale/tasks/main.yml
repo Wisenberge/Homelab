@@ -1,0 +1,121 @@
+---
+- name: Look for a saved Tailscale login
+  ansible.builtin.stat:
+    path: "{{ tailscale_dir }}/state/tailscaled.state"
+  register: tailscale_state_file
+
+- name: Make sure Tailscale can log in
+  ansible.builtin.assert:
+    that: tailscale_auth_key | length > 0 or tailscale_state_file.stat.exists
+    fail_msg: "Set tailscale_auth_key (as a Semaphore secret) for the first run."
+    quiet: true
+
+- name: Look for the TUN device
+  ansible.builtin.stat:
+    path: /dev/net/tun
+  register: tailscale_tun
+
+- name: Make sure the TUN device exists
+  ansible.builtin.assert:
+    that: tailscale_tun.stat.exists
+    fail_msg: >-
+      /dev/net/tun is missing, and Tailscale needs it. If this host is a Proxmox
+      LXC container, allow TUN in the container's config or use a VM instead.
+    quiet: true
+
+- name: Check that Docker Compose is installed
+  ansible.builtin.command: docker compose version
+  register: tailscale_compose_check
+  changed_when: false
+  failed_when: tailscale_compose_check.rc != 0
+
+- name: Create the Tailscale folders
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+  loop:
+    - "{{ tailscale_dir }}"
+    - "{{ tailscale_dir }}/state"   # login keys (never backed up to Git)
+
+- name: Store the auth key in a private .env file
+  ansible.builtin.copy:
+    dest: "{{ tailscale_dir }}/.env"
+    content: |
+      TS_AUTHKEY={{ tailscale_auth_key }}
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+
+- name: Write the Tailscale compose file
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ tailscale_dir }}/compose.yml"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Start Tailscale
+  community.docker.docker_compose_v2:
+    project_src: "{{ tailscale_dir }}"
+    state: present
+    remove_orphans: true
+
+- name: Wait for Tailscale to connect
+  block:
+    - name: Wait until Tailscale reports it's running
+      ansible.builtin.command: docker exec tailscale tailscale status --json
+      register: tailscale_status
+      changed_when: false
+      retries: 12
+      delay: 5
+      until: tailscale_status.rc == 0 and (tailscale_status.stdout | from_json).BackendState == 'Running'
+  rescue:
+    - name: Explain why Tailscale didn't connect
+      ansible.builtin.fail:
+        msg: >-
+          Tailscale didn't connect. Usually the auth key is expired or was already
+          used. Create a new key, update tailscale_auth_key in Semaphore, delete
+          {{ tailscale_dir }}/state on {{ inventory_hostname }}, and run this again.
+          To see details, run on the host: docker logs tailscale
+
+- name: Get this host's Tailscale IP
+  ansible.builtin.command: docker exec tailscale tailscale ip -4
+  register: tailscale_ip
+  changed_when: false
+
+- name: Check the services you reach through Tailscale
+  when: tailscale_check_urls | length > 0
+  block:
+    - name: Check that each URL answers
+      ansible.builtin.uri:
+        url: "{{ item }}"
+        timeout: 10
+      loop: "{{ tailscale_check_urls }}"
+      register: tailscale_url_check
+      until: tailscale_url_check is succeeded
+      retries: 6
+      delay: 5
+  rescue:
+    - name: Explain why a service didn't answer
+      ansible.builtin.fail:
+        msg: >-
+          A URL in tailscale_check_urls didn't answer over Tailscale. Check that the
+          machine is shared with you and you accepted it, that it's online, and that
+          its firewall allows the port on the tailscale0 interface.
+
+- name: Read the list of Tailscale peers
+  ansible.builtin.command: docker exec tailscale tailscale status
+  register: tailscale_peers
+  changed_when: false
+
+- name: Show the connection details
+  ansible.builtin.debug:
+    msg:
+      - "Tailscale IP of {{ inventory_hostname }}: {{ tailscale_ip.stdout }}"
+      - "Apps behind this proxy should trust that IP (Jellyfin: Dashboard > Networking > Known proxies)."
+      - "Peers below: 'direct' is the fast path; 'relay' works but is slower."
+      - "{{ tailscale_peers.stdout_lines }}"
